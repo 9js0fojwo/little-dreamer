@@ -1,5 +1,5 @@
 """
-小小梦想家 — Flask 后端
+会飞的城堡 — Flask 后端
 儿童 AI 虚拟世界构建器
 """
 
@@ -145,7 +145,7 @@ def api_delete_entity(world_id, entity_id):
 if __name__ == "__main__":
     port = 8080
     print(f"\n{'='*50}")
-    print(f"  🌟 小小梦想家 v1.0 MVP")
+    print(f"  🌟 会飞的城堡 v1.0 MVP")
     print(f"  打开浏览器: http://127.0.0.1:{port}")
     print(f"{'='*50}\n")
     app.run(host="127.0.0.1", port=port, debug=True)
