@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌟 小小梦想家</title>
+<style>
+:root {
+  --bg-top: #fce4ec;
+  --bg-bottom: #e8eaf6;
+  --card-bg: rgba(255,255,255,0.92);
+  --text: #4a3f6b;
+  --text-light: #7e729b;
+  --accent: #ec4899;
+  --accent2: #8b5cf6;
+  --accent3: #f59e0b;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 4px 20px rgba(100,60,150,0.12);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom) 70%);
+  min-height: 100vh;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+/* === Stars Background === */
+.stars {
+  position: fixed; top:0; left:0; width:100%; height:100%;
+  pointer-events: none; z-index: 0;
+}
+.star {
+  position: absolute; border-radius: 50%;
+  background: rgba(255,255,255,0.8);
+  animation: twinkle var(--dur) ease-in-out infinite;
+  animation-delay: var(--delay);
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.5); }
+}
+
+/* === Toolbar === */
+.toolbar {
+  position: fixed; top: 12px; left: 16px; right: 16px;
+  display: flex; align-items: center; gap: 8px;
+  z-index: 100; flex-wrap: wrap;
+}
+.toolbar .title {
+  font-size: 22px; font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-right: auto;
+}
+.toolbar button {
+  padding: 8px 16px; border: none; border-radius: 20px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  background: rgba(255,255,255,0.85); color: var(--text);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  transition: all 0.2s; white-space: nowrap;
+}
+.toolbar button:hover { background: #fff; transform: translateY(-1px); box-shadow: var(--shadow); }
+.toolbar button.accent { background: var(--accent); color: #fff; }
+.toolbar .world-name {
+  font-size: 13px; color: var(--text-light); max-width: 120px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* === Canvas === */
+.canvas-wrap {
+  position: fixed; top: 70px; left: 0; right: 0;
+  bottom: 90px; overflow: hidden; z-index: 1;
+}
+.canvas-inner {
+  position: absolute; width: 4000px; height: 4000px;
+  transform-origin: 0 0;
+}
+.placeholder {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  text-align: center; color: var(--text-light); pointer-events: none;
+  font-size: 18px; opacity: 0.6;
+}
+.placeholder .icon { font-size: 60px; margin-bottom: 12px; }
+
+/* === Entity Card === */
+.entity-card {
+  position: absolute; cursor: grab;
+  background: var(--card-bg); border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 10px 10px 14px;
+  text-align: center;
+  transition: box-shadow 0.2s, transform 0.1s;
+  z-index: 10; min-width: 120px; max-width: 180px;
+}
+.entity-card:hover { box-shadow: 0 8px 30px rgba(100,60,150,0.2); }
+.entity-card.dragging {
+  cursor: grabbing; opacity: 0.85;
+  box-shadow: 0 12px 40px rgba(100,60,150,0.25);
+  z-index: 999;
+}
+.entity-card img {
+  width: 100px; height: 100px; border-radius: var(--radius-sm);
+  object-fit: cover; margin-bottom: 6px; background: #f3e8ff;
+}
+.entity-card .no-img {
+  width: 100px; height: 100px; border-radius: var(--radius-sm);
+  margin: 0 auto 6px; display: flex; align-items: center;
+  justify-content: center; font-size: 40px;
+  background: linear-gradient(135deg, #fce4ec, #f3e8ff);
+}
+.entity-card .e-name {
+  font-size: 15px; font-weight: 700; color: var(--text);
+  margin-bottom: 2px;
+}
+.entity-card .e-type {
+  font-size: 11px; color: var(--text-light);
+  background: #f5f0ff; border-radius: 10px;
+  padding: 2px 8px; display: inline-block;
+}
+.entity-card .e-actions {
+  display: none; position: absolute; top: -8px; right: -8px;
+}
+.entity-card:hover .e-actions { display: flex; gap: 4px; }
+.e-actions button {
+  width: 24px; height: 24px; border-radius: 50%; border: none;
+  font-size: 12px; cursor: pointer;
+  background: rgba(255,255,255,0.9);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+/* === Input Bar === */
+.input-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(10px);
+  padding: 12px 16px; z-index: 200;
+  box-shadow: 0 -2px 20px rgba(0,0,0,0.06);
+  display: flex; align-items: center; gap: 10px;
+}
+.input-bar input {
+  flex: 1; padding: 12px 18px;
+  border: 2px solid #e0d6f0; border-radius: 25px;
+  font-size: 16px; outline: none;
+  background: #faf8ff; color: var(--text);
+  transition: border-color 0.2s;
+}
+.input-bar input:focus { border-color: var(--accent2); }
+.input-bar input::placeholder { color: #c4b5e0; }
+.input-bar button.main-btn {
+  padding: 12px 28px; border: none; border-radius: 25px;
+  font-size: 16px; font-weight: 700; cursor: pointer;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff; box-shadow: 0 4px 14px rgba(139,92,246,0.3);
+  transition: all 0.2s;
+}
+.input-bar button.main-btn:hover { transform: scale(1.03); }
+.input-bar button.main-btn:disabled {
+  opacity: 0.6; transform: none; cursor: not-allowed;
+}
+.input-bar .hint {
+  font-size: 12px; color: var(--text-light);
+  white-space: nowrap; display: none;
+}
+@media (min-width: 600px) { .input-bar .hint { display: block; } }
+
+/* === Loading === */
+.loading-overlay {
+  display: none; position: fixed; top:0; left:0; width:100%; height:100%;
+  background: rgba(255,255,255,0.7); z-index: 9999;
+  align-items: center; justify-content: center; flex-direction: column;
+}
+.loading-overlay.show { display: flex; }
+.dream-loader {
+  width: 60px; height: 60px; border: 5px solid #f3e8ff;
+  border-top-color: var(--accent2);
+  border-radius: 50%; animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 16px; color: var(--accent); font-weight: 600; }
+
+/* === Modal === */
+.modal {
+  display: none; position: fixed; top:0; left:0; width:100%; height:100%;
+  background: rgba(0,0,0,0.4); z-index: 9998;
+  align-items: center; justify-content: center;
+}
+.modal.show { display: flex; }
+.modal-card {
+  background: #fff; border-radius: var(--radius);
+  padding: 24px; max-width: 360px; width: 90%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  text-align: center;
+}
+.modal-card h3 { margin-bottom: 12px; color: var(--text); }
+.modal-card p { font-size: 14px; color: var(--text-light); margin: 4px 0; }
+.modal-card .btns { display: flex; gap: 8px; margin-top: 16px; }
+.modal-card .btns button {
+  flex: 1; padding: 10px; border: none; border-radius: 12px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.modal-card .btns .ok { background: var(--accent2); color: #fff; }
+.modal-card .btns .cancel { background: #f0f0f0; color: var(--text); }
+
+/* === World List === */
+.world-list { text-align: left; max-height: 200px; overflow-y: auto; margin: 12px 0; }
+.world-list .w-item {
+  padding: 10px 12px; border-radius: 8px; cursor: pointer;
+  display: flex; justify-content: space-between; align-items: center;
+  transition: background 0.15s;
+}
+.world-list .w-item:hover { background: #f5f0ff; }
+.world-list .w-item .w-name { font-weight: 600; }
+.world-list .w-item .w-meta { font-size: 12px; color: var(--text-light); }
+</style>
+</head>
+<body>
+
+<!-- Stars -->
+<div class="stars" id="stars"></div>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <div class="title">🌟 小小梦想家</div>
+  <span class="world-name" id="world-name-display">我的梦想世界</span>
+  <button onclick="newWorld()">🆕 新世界</button>
+  <button onclick="showLoadModal()">📂 加载</button>
+  <button onclick="saveWorld()">💾 保存</button>
+  <button onclick="clearCanvas()">🧹 清空</button>
+</div>
+
+<!-- Canvas -->
+<div class="canvas-wrap" id="canvas-wrap">
+  <div class="canvas-inner" id="canvas-inner">
+    <div class="placeholder" id="placeholder">
+      <div class="icon">🌈</div>
+      <div>说说你想创造什么吧~</div>
+      <div style="font-size:13px;margin-top:4px;">比如："一只会说话的彩虹独角兽"</div>
+    </div>
+  </div>
+</div>
+
+<!-- Input Bar -->
+<div class="input-bar">
+  <span class="hint">💡 试试：</span>
+  <input id="dream-input" type="text"
+         placeholder="描述你想创造的角色、建筑、或任何东西..."
+         maxlength="500"
+         onkeydown="if(event.key==='Enter')createDream()">
+  <button class="main-btn" id="create-btn" onclick="createDream()">✨ 创造</button>
+</div>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loading">
+  <div class="dream-loader"></div>
+  <div class="loading-text">正在创造你的梦想...</div>
+</div>
+
+<!-- Entity Detail Modal -->
+<div class="modal" id="detail-modal">
+  <div class="modal-card">
+    <h3 id="detail-name"></h3>
+    <p id="detail-desc"></p>
+    <p id="detail-abilities" style="color:var(--accent);"></p>
+    <p id="detail-story" style="font-style:italic;color:var(--text-light);"></p>
+    <div class="btns">
+      <button class="cancel" onclick="closeDetail()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- World List Modal -->
+<div class="modal" id="world-modal">
+  <div class="modal-card">
+    <h3>📂 你的世界</h3>
+    <div class="world-list" id="world-list"></div>
+    <div class="btns">
+      <button class="cancel" onclick="closeWorldModal()">取消</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== State =====
+let currentWorldId = null;
+let entities = [];
+let scale = 1;
+let offsetX = 0, offsetY = 0;
+let isPanning = false, panStart = {x:0,y:0};
+
+// ===== Init =====
+createStars();
+loadLatestWorld();
+
+function createStars() {
+  const container = document.getElementById('stars');
+  for (let i = 0; i < 50; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    star.style.left = Math.random() * 100 + '%';
+    star.style.top = Math.random() * 100 + '%';
+    star.style.width = star.style.height = (2 + Math.random() * 4) + 'px';
+    star.style.setProperty('--dur', (2 + Math.random() * 4) + 's');
+    star.style.setProperty('--delay', Math.random() * 3 + 's');
+    container.appendChild(star);
+  }
+}
+
+// ===== World Management =====
+async function loadLatestWorld() {
+  try {
+    const resp = await fetch('/api/worlds');
+    const data = await resp.json();
+    if (data.worlds.length > 0) {
+      loadWorld(data.worlds[0].world_id);
+    } else {
+      newWorld();
+    }
+  } catch(e) { newWorld(); }
+}
+
+async function newWorld() {
+  const name = prompt('给你的世界取个名字吧~', '我的梦想世界');
+  if (!name) return;
+  const resp = await fetch('/api/world/new', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name})
+  });
+  const world = await resp.json();
+  currentWorldId = world.world_id;
+  entities = [];
+  document.getElementById('world-name-display').textContent = name;
+  renderCanvas();
+}
+
+async function loadWorld(id) {
+  try {
+    const resp = await fetch(`/api/world/${id}`);
+    const world = await resp.json();
+    currentWorldId = world.world_id;
+    entities = world.entities || [];
+    document.getElementById('world-name-display').textContent = world.name;
+    renderCanvas();
+  } catch(e) {}
+}
+
+async function saveWorld() {
+  if (!currentWorldId) return;
+  try {
+    await fetch('/api/world/save', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({world_id: currentWorldId, entities})
+    });
+    showToast('💾 世界已保存！');
+  } catch(e) { showToast('保存失败...'); }
+}
+
+function clearCanvas() {
+  if (!confirm('确定要清空画布吗？角色会被删除哦~')) return;
+  entities = [];
+  if (currentWorldId) {
+    fetch(`/api/world/${currentWorldId}`, {
+      method: 'DELETE'
+    }).then(() => renderCanvas());
+  }
+  renderCanvas();
+}
+
+async function showLoadModal() {
+  const modal = document.getElementById('world-modal');
+  const list = document.getElementById('world-list');
+  try {
+    const resp = await fetch('/api/worlds');
+    const data = await resp.json();
+    list.innerHTML = data.worlds.map(w => `
+      <div class="w-item" onclick="loadWorld('${w.world_id}');closeWorldModal()">
+        <div>
+          <div class="w-name">${escHtml(w.name)}</div>
+          <div class="w-meta">${w.entity_count} 个角色 · ${w.updated_at}</div>
+        </div>
+        <button style="background:none;border:none;cursor:pointer;font-size:14px;"
+                onclick="event.stopPropagation();deleteWorld('${w.world_id}')">🗑</button>
+      </div>
+    `).join('') || '<div style="text-align:center;color:var(--text-light);">还没有世界哦~</div>';
+    modal.classList.add('show');
+  } catch(e) {}
+}
+
+function closeWorldModal() {
+  document.getElementById('world-modal').classList.remove('show');
+}
+
+async function deleteWorld(id) {
+  if (!confirm('删除这个世界？')) return;
+  await fetch(`/api/world/${id}`, {method:'DELETE'});
+  if (id === currentWorldId) {
+    currentWorldId = null;
+    entities = [];
+    renderCanvas();
+  }
+  showLoadModal();
+}
+
+// ===== Create Dream =====
+async function createDream() {
+  const input = document.getElementById('dream-input');
+  const desc = input.value.trim();
+  if (!desc) return;
+
+  // Ensure world exists
+  if (!currentWorldId) {
+    const resp = await fetch('/api/world/new', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name: '我的梦想世界'})
+    });
+    const world = await resp.json();
+    currentWorldId = world.world_id;
+    document.getElementById('world-name-display').textContent = world.name;
+  }
+
+  // Loading
+  document.getElementById('loading').classList.add('show');
+  document.getElementById('create-btn').disabled = true;
+  input.value = '';
+
+  try {
+    const resp = await fetch('/api/create', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({description: desc, world_id: currentWorldId})
+    });
+    const data = await resp.json();
+    if (data.error) {
+      alert('哎呀：' + data.error);
+      return;
+    }
+    entities.push(data.entity);
+    renderCanvas();
+  } catch(e) {
+    alert('创造失败了，再试一次吧~');
+  } finally {
+    document.getElementById('loading').classList.remove('show');
+    document.getElementById('create-btn').disabled = false;
+    input.focus();
+  }
+}
+
+// ===== Canvas Rendering =====
+function renderCanvas() {
+  const container = document.getElementById('canvas-inner');
+  const placeholder = document.getElementById('placeholder');
+
+  // Remove old cards
+  container.querySelectorAll('.entity-card').forEach(el => el.remove());
+
+  if (entities.length === 0) {
+    placeholder.style.display = 'block';
+  } else {
+    placeholder.style.display = 'none';
+    entities.forEach((e, i) => {
+      const card = document.createElement('div');
+      card.className = 'entity-card';
+      card.id = 'card-' + e.id;
+      card.style.left = (e.x || 200 + i * 60) + 'px';
+      card.style.top = (e.y || 200 + i * 40) + 'px';
+
+      const imgHtml = e.image_path
+        ? `<img src="/${e.image_path}" alt="${escHtml(e.name)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="no-img" style="display:none">${emojiForType(e.type)}</div>`
+        : `<div class="no-img">${emojiForType(e.type)}</div>`;
+
+      card.innerHTML = `
+        <div class="e-actions">
+          <button title="详情" onclick="event.stopPropagation();showDetail('${e.id}')">ℹ</button>
+          <button title="删除" onclick="event.stopPropagation();removeEntity('${e.id}')">🗑</button>
+        </div>
+        ${imgHtml}
+        <div class="e-name">${escHtml(e.name)}</div>
+        <div class="e-type">${typeLabel(e.type)}</div>
+      `;
+
+      // Drag
+      card.addEventListener('mousedown', startDrag);
+      card.addEventListener('touchstart', startDrag, {passive: false});
+
+      // Double click → detail
+      card.addEventListener('dblclick', () => showDetail(e.id));
+
+      container.appendChild(card);
+    });
+  }
+}
+
+function emojiForType(type) {
+  const map = {character:'🧑', building:'🏰', creature:'🐉', scene:'🌈', item:'💎'};
+  return map[type] || '✨';
+}
+
+function typeLabel(type) {
+  const map = {character:'角色', building:'建筑', creature:'生物', scene:'场景', item:'物品'};
+  return map[type] || type;
+}
+
+function escHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ===== Drag =====
+let dragTarget = null;
+let dragOffset = {x:0, y:0};
+
+function startDrag(e) {
+  e.preventDefault();
+  const card = e.target.closest('.entity-card');
+  if (!card) return;
+
+  // Don't drag when clicking action buttons
+  if (e.target.closest('.e-actions')) return;
+
+  dragTarget = card;
+  card.classList.add('dragging');
+
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const rect = card.getBoundingClientRect();
+  dragOffset.x = clientX - rect.left;
+  dragOffset.y = clientY - rect.top;
+
+  document.addEventListener('mousemove', onDrag);
+  document.addEventListener('mouseup', endDrag);
+  document.addEventListener('touchmove', onDrag, {passive: false});
+  document.addEventListener('touchend', endDrag);
+}
+
+function onDrag(e) {
+  if (!dragTarget) return;
+  e.preventDefault();
+
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const wrap = document.getElementById('canvas-wrap');
+  const wrapRect = wrap.getBoundingClientRect();
+
+  const x = clientX - wrapRect.left - dragOffset.x - offsetX;
+  const y = clientY - wrapRect.top - dragOffset.y - offsetY;
+
+  dragTarget.style.left = x + 'px';
+  dragTarget.style.top = y + 'px';
+}
+
+function endDrag() {
+  if (!dragTarget) return;
+  dragTarget.classList.remove('dragging');
+
+  // Update entity data
+  const entityId = dragTarget.id.replace('card-', '');
+  const entity = entities.find(e => e.id === entityId);
+  if (entity) {
+    entity.x = parseInt(dragTarget.style.left) || entity.x;
+    entity.y = parseInt(dragTarget.style.top) || entity.y;
+    // Save position
+    if (currentWorldId) {
+      fetch('/api/entity/move', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          world_id: currentWorldId,
+          entity_id: entityId,
+          x: entity.x, y: entity.y
+        })
+      }).catch(() => {});
+    }
+  }
+
+  dragTarget = null;
+  document.removeEventListener('mousemove', onDrag);
+  document.removeEventListener('mouseup', endDrag);
+  document.removeEventListener('touchmove', onDrag);
+  document.removeEventListener('touchend', endDrag);
+}
+
+// ===== Entity Actions =====
+function showDetail(id) {
+  const entity = entities.find(e => e.id === id);
+  if (!entity) return;
+  document.getElementById('detail-name').textContent = entity.name + ' ' + emojiForType(entity.type);
+  document.getElementById('detail-desc').textContent = entity.appearance || entity.description || '';
+  document.getElementById('detail-abilities').textContent = (entity.abilities || []).join(' · ');
+  document.getElementById('detail-story').textContent = entity.story || '';
+  document.getElementById('detail-modal').classList.add('show');
+}
+
+function closeDetail() {
+  document.getElementById('detail-modal').classList.remove('show');
+}
+
+async function removeEntity(id) {
+  if (!confirm('把这个角色删掉吗？')) return;
+  entities = entities.filter(e => e.id !== id);
+  if (currentWorldId) {
+    await fetch(`/api/entity/${currentWorldId}/${id}`, {method:'DELETE'}).catch(()=>{});
+  }
+  renderCanvas();
+}
+
+// ===== Canvas Pan / Zoom =====
+const canvasWrap = document.getElementById('canvas-wrap');
+canvasWrap.addEventListener('wheel', e => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? -0.1 : 0.1;
+  scale = Math.max(0.3, Math.min(2, scale + delta));
+  document.getElementById('canvas-inner').style.transform = `scale(${scale})`;
+}, {passive: false});
+
+// ===== Toast =====
+function showToast(msg) {
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position:fixed; top:20px; left:50%; transform:translateX(-50%);
+    background:#333; color:#fff; padding:10px 24px; border-radius:25px;
+    z-index:9999; font-size:14px; opacity:0; transition:opacity 0.3s;
+  `;
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => { toast.style.opacity = '1'; });
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 300);
+  }, 2000);
+}
+
+// Close modals on background click
+document.getElementById('detail-modal').addEventListener('click', e => {
+  if (e.target.id === 'detail-modal') closeDetail();
+});
+document.getElementById('world-modal').addEventListener('click', e => {
+  if (e.target.id === 'world-modal') closeWorldModal();
+});
+</script>
+</body>
+</html>
