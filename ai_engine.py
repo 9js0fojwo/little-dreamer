@@ -95,63 +95,60 @@ def parse_description(user_input: str) -> dict:
 def generate_image(scene_desc: str, style: str = "children_book") -> Optional[str]:
     """
     调用通义万相生成图片，返回本地图片路径
-    使用 DashScope API
+    使用最新 wan2.6-t2i 模型，每天免费 50 次
     """
     try:
-        # 构建完整的画图提示词
-        full_prompt = f"儿童绘本风格，可爱Q版卡通，色彩明亮温馨，{scene_desc}"
+        full_prompt = f"儿童绘本风格，可爱Q版卡通，色彩明亮温馨柔和，{scene_desc}"
 
-        # 通义万相 API（DashScope）
-        url = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis"
+        # 通义万相最新 API（2026）
+        url = "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation"
         headers = {
             "Authorization": f"Bearer {DASHSCOPE_API_KEY}",
             "Content-Type": "application/json",
-            "X-DashScope-Async": "enable",
         }
         body = {
-            "model": "wanx2.0-t2i-turbo",
+            "model": "wan2.2-t2i-flash",  # 免费额度：每天 50 次
             "input": {
-                "prompt": full_prompt,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [{"text": full_prompt}],
+                    }
+                ]
             },
             "parameters": {
                 "size": "1024*1024",
                 "n": 1,
+                "watermark": False,
+                "prompt_extend": True,
             },
         }
 
-        # 提交任务
-        resp = requests.post(url, headers=headers, json=body, timeout=30)
+        # 同步调用
+        resp = requests.post(url, headers=headers, json=body, timeout=60)
         if resp.status_code != 200:
             return None
 
-        task_data = resp.json()
-        task_id = task_data.get("output", {}).get("task_id", "")
-
-        if not task_id:
+        result = resp.json()
+        # 提取图片 URL
+        output = result.get("output", {})
+        choices = output.get("choices", [])
+        if not choices:
             return None
 
-        # 等待任务完成（轮询最多 30 秒）
-        check_url = f"https://dashscope.aliyuncs.com/api/v1/tasks/{task_id}"
-        for _ in range(30):
-            time.sleep(1)
-            r = requests.get(check_url, headers={"Authorization": f"Bearer {DASHSCOPE_API_KEY}"}, timeout=10)
-            if r.status_code != 200:
-                continue
-            result = r.json()
-            status = result.get("output", {}).get("task_status", "")
-            if status == "SUCCEEDED":
-                img_url = result["output"]["results"][0]["url"]
-                # 下载图片到本地
-                img_data = requests.get(img_url, timeout=30).content
-                img_id = uuid.uuid4().hex[:8]
-                img_path = image_dir / f"dreamer_{img_id}.png"
-                with open(img_path, "wb") as f:
-                    f.write(img_data)
-                return str(img_path)
-            elif status == "FAILED":
-                return None
+        img_url = choices[0].get("message", {}).get("content", [])
+        if isinstance(img_url, list):
+            img_url = img_url[0].get("image", "") if img_url else ""
+        if not img_url:
+            return None
 
-        return None
+        # 下载图片到本地
+        img_data = requests.get(img_url, timeout=30).content
+        img_id = uuid.uuid4().hex[:8]
+        img_path = image_dir / f"dreamer_{img_id}.png"
+        with open(img_path, "wb") as f:
+            f.write(img_data)
+        return str(img_path)
 
     except Exception:
         return None
